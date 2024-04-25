@@ -1,42 +1,68 @@
 import cv2
 import os
-import requests
-import json
-from base64 import b64encode
+import pytesseract
 import time
+import json
 
 
-def Google_OCR_makeImageData(imgpath):
-    with open(imgpath, 'rb') as f:
-        ctxt = b64encode(f.read()).decode()
-        img_req = {
-            'image': {
-                'content': ctxt
-            },
-            'features': [{
-                'type': 'DOCUMENT_TEXT_DETECTION',
-                # 'type': 'TEXT_DETECTION',
-                'maxResults': 1
-            }]
-        }
-    return json.dumps({"requests": img_req}).encode()
+def ocr_detection_pytesseract(imgpath):
+    """
+    Performs OCR on the given image using pytesseract.
 
+    Args:
+        imgpath (str): Path to the input image file.
 
-def ocr_detection_google(imgpath):
-    start = time.clock()
-    url = 'https://vision.googleapis.com/v1/images:annotate'
-    api_key = 'AIzaSyDUc4iOUASJQYkVwSomIArTKhE2C6bHK8U'             # *** Replace with your own Key ***
-    imgdata = Google_OCR_makeImageData(imgpath)
-    response = requests.post(url,
-                             data=imgdata,
-                             params={'key': api_key},
-                             headers={'Content_Type': 'application/json'})
-    # print('*** Text Detection Time Taken:%.3fs ***' % (time.clock() - start))
-    print("*** Please replace the Google OCR key at detect_text/ocr.py line 28 with your own (apply in https://cloud.google.com/vision) ***")
-    if 'responses' not in response.json():
-        raise Exception(response.json())
-    if response.json()['responses'] == [{}]:
-        # No Text
+    Returns:
+        dict: Dictionary containing the detected text annotations and their bounding boxes.
+    """
+    start = time.time()
+    img = cv2.imread(imgpath)
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    results = pytesseract.image_to_data(img_rgb, output_type=pytesseract.Output.DICT)
+    print('*** Text Detection Time Taken: %.3fs ***' % (time.time() - start))
+
+    if not results['text']:
         return None
     else:
-        return response.json()['responses'][0]['textAnnotations'][1:]
+        return results_to_annotations(results, img.shape)
+
+
+def results_to_annotations(results, img_shape):
+    """
+    Converts the OCR results from pytesseract to the expected JSON format.
+
+    Args:
+        results (dict): Dictionary containing the OCR results from pytesseract.
+        img_shape (tuple): Shape of the input image (height, width).
+
+    Returns:
+        dict: Dictionary containing the text annotations and their bounding boxes.
+    """
+    texts = []
+    for i in range(len(results['level'])):
+        if results['text'][i].strip():
+            text = {
+                'id': i,
+                'content': results['text'][i],
+                'column_min': results['left'][i],
+                'row_min': results['top'][i],
+                'column_max': results['left'][i] + results['width'][i],
+                'row_max': results['top'][i] + results['height'][i],
+                'width': results['width'][i],
+                'height': results['height'][i]
+            }
+            texts.append(text)
+    return {'img_shape': img_shape[:2], 'texts': texts}
+
+
+def ocr_detection(imgpath):
+    """
+    Wrapper function for OCR detection using pytesseract.
+
+    Args:
+        imgpath (str): Path to the input image file.
+
+    Returns:
+        dict: Dictionary containing the detected text annotations and their bounding boxes.
+    """
+    return ocr_detection_pytesseract(imgpath)

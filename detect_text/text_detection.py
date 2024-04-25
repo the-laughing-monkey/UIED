@@ -6,6 +6,7 @@ import json
 import time
 import os
 from os.path import join as pjoin
+import pytesseract
 
 
 def save_detection_json(file_path, texts, img_shape):
@@ -31,9 +32,10 @@ def visualize_texts(org_img, texts, shown_resize_height=None, show=False, write_
         img_resize = cv2.resize(img, (int(shown_resize_height * (img.shape[1]/img.shape[0])), shown_resize_height))
 
     if show:
-        cv2.imshow('texts', img_resize)
-        cv2.waitKey(0)
-        cv2.destroyWindow('texts')
+        print("Warning: cv2.imshow() is not supported in headless mode. Skipping visualization of texts.")
+#        cv2.imshow('texts', img_resize)
+#        cv2.waitKey(0)
+#        cv2.destroyWindow('texts')
     if write_path is not None:
         cv2.imwrite(write_path, img)
 
@@ -127,35 +129,28 @@ def text_filter_noise(texts):
     return valid_texts
 
 
-def text_detection(input_file='../data/input/30800.jpg', output_file='../data/output', show=False, method='google', paddle_model=None):
-    '''
-    :param method: google or paddle
-    :param paddle_model: the preload paddle model for paddle ocr
-    '''
-    start = time.clock()
+def text_detection(input_file='../data/input/30800.jpg', output_file='../data/output', show=False, method='pytesseract'):
+    start = time.perf_counter()
     name = input_file.split('/')[-1][:-4]
     ocr_root = pjoin(output_file, 'ocr')
     img = cv2.imread(input_file)
 
-    if method == 'google':
-        print('*** Detect Text through Google OCR ***')
-        ocr_result = ocr.ocr_detection_google(input_file)
-        texts = text_cvt_orc_format(ocr_result)
+    print('*** Detect Text through pytesseract OCR ***')
+    ocr_result = ocr.ocr_detection_pytesseract(input_file)
+    
+    if ocr_result is not None:
+        texts = text_cvt_orc_format(ocr_result['texts'])
         texts = merge_intersected_texts(texts)
         texts = text_filter_noise(texts)
         texts = text_sentences_recognition(texts)
-    elif method == 'paddle':
-        # The import of the paddle ocr can be separate to the beginning of the program if you decide to use this method
-        from paddleocr import PaddleOCR
-        print('*** Detect Text through Paddle OCR ***')
-        if paddle_model is None:
-            paddle_model = PaddleOCR(use_angle_cls=True, lang="ch")
-        result = paddle_model.ocr(input_file, cls=True)
-        texts = text_cvt_orc_format_paddle(result)
+        
+        visualize_texts(img, texts, shown_resize_height=800, show=False, write_path=pjoin(ocr_root, name+'.png'))
+        save_detection_json(pjoin(ocr_root, name+'.json'), texts, img.shape)
+        print("[Text Detection Completed in %.3f s] Input: %s Output: %s" % (time.perf_counter() - start, input_file, pjoin(ocr_root, name+'.json')))
     else:
-        raise ValueError('Method has to be "google" or "paddle"')
+        print("[No Text Detected] Input: %s" % input_file)
 
-    visualize_texts(img, texts, shown_resize_height=800, show=show, write_path=pjoin(ocr_root, name+'.png'))
+    visualize_texts(img, texts, shown_resize_height=800, show=False, write_path=pjoin(ocr_root, name+'.png'))
     save_detection_json(pjoin(ocr_root, name+'.json'), texts, img.shape)
     print("[Text Detection Completed in %.3f s] Input: %s Output: %s" % (time.clock() - start, input_file, pjoin(ocr_root, name+'.json')))
 

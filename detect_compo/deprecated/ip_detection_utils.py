@@ -230,7 +230,7 @@ def clipping_by_line(boundary, boundary_rec, lines):
 #             col_max = col_max + ocr_padding if col_max + ocr_padding < org.shape[1] else org.shape[1]
 #             # check if this area is text
 #             clip = org[row_min: row_max, col_min: col_max]
-#             if not ocr.is_text(clip, ocr_min_word_area, show=show):
+#             if not ocr.is_text(clip, ocr_min_word_area, show=False):
 #                 new_corners.append(corner)
 #                 new_class.append(compo_class[i])
 #     return new_corners, new_class

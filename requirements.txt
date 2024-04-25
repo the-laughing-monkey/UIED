@@ -1,0 +1,6 @@
+opencv-contrib-python-headless
+opencv-python-headless
+pytesseract
+merge
+libgl1-mesa-glx
+numpy

@@ -25,7 +25,7 @@ def merge_intersected_corner(compos, org, is_merge_contained_ele, max_gap=(0, 0)
         for j in range(len(new_compos)):
             relation = cur_compo.compo_relation(new_compos[j], max_gap)
             # print(relation)
-            # draw.draw_bounding_box(org, [cur_compo, new_compos[j]], name='b-merge', show=True)
+            # draw.draw_bounding_box(org, [cur_compo, new_compos[j]], name='b-merge', show=False)
             # merge compo[i] to compo[j] if
             # 1. compo[j] contains compo[i]
             # 2. compo[j] intersects with compo[i] with certain iou
@@ -37,7 +37,7 @@ def merge_intersected_corner(compos, org, is_merge_contained_ele, max_gap=(0, 0)
 
                 new_compos[j].compo_merge(cur_compo)
                 cur_compo = new_compos[j]
-                # draw.draw_bounding_box(org, [new_compos[j]], name='a-merge', show=True)
+                # draw.draw_bounding_box(org, [new_compos[j]], name='a-merge', show=False)
                 merged = True
                 changed = True
                 # break
@@ -218,9 +218,7 @@ def rm_line_v_h(binary, show=False, max_line_thickness=C.THRESHOLD_LINE_THICKNES
     binary -= map_line
 
     if show:
-        cv2.imshow('no-line', binary)
-        cv2.imshow('lines', map_line)
-        cv2.waitKey()
+        print(f"Warning: cv2.imshow() is not supported in headless mode. Skipping visualization.")
 
 
 def rm_line(binary,
@@ -315,21 +313,21 @@ def detect_compos_in_img(compos, binary, org, max_compo_scale=C.THRESHOLD_COMPO_
         if compo.category == 'Image':
             compo.compo_update_bbox_area()
             # org_clip = compo.compo_clipping(org)
-            # bin_clip = pre.binarization(org_clip, show=show)
+            # bin_clip = pre.binarization(org_clip, show=False)
             bin_clip = compo.compo_clipping(binary)
-            bin_clip = pre.reverse_binary(bin_clip, show=show)
+            bin_clip = pre.reverse_binary(bin_clip, show=False)
 
             compos_rec, compos_nonrec = component_detection(bin_clip, test=False, step_h=10, step_v=10, rec_detect=True)
             for compo_rec in compos_rec:
                 compo_rec.compo_relative_position(compo.bbox.col_min, compo.bbox.row_min)
                 if compo_rec.bbox_area / compo.bbox_area < 0.8 and compo_rec.bbox.height > 20 and compo_rec.bbox.width > 20:
                     compos_new.append(compo_rec)
-                    # draw.draw_bounding_box(org, [compo_rec], show=True)
+                    # draw.draw_bounding_box(org, [compo_rec], show=False)
 
             # compos_inner = component_detection(bin_clip, rec_detect=False)
             # for compo_inner in compos_inner:
             #     compo_inner.compo_relative_position(compo.bbox.col_min, compo.bbox.row_min)
-            #     draw.draw_bounding_box(org, [compo_inner], show=True)
+            #     draw.draw_bounding_box(org, [compo_inner], show=False)
             #     if compo_inner.bbox_area / compo.bbox_area < 0.8:
             #         compos_new.append(compo_inner)
     compos += compos_new
@@ -446,7 +444,7 @@ def component_detection(binary, min_obj_area,
 
                 if test:
                     print('Area:%d' % (len(region)))
-                    draw.draw_boundary([component], binary.shape, show=True)
+                    draw.draw_boundary([component], binary.shape, show=False)
 
                 compos_all.append(component)
 
@@ -461,9 +459,9 @@ def component_detection(binary, min_obj_area,
 
                 if show:
                     print('Area:%d' % (len(region)))
-                    draw.draw_boundary(compos_all, binary.shape, show=True)
+                    draw.draw_boundary(compos_all, binary.shape, show=False)
 
-    # draw.draw_boundary(compos_all, binary.shape, show=True)
+    # draw.draw_boundary(compos_all, binary.shape, show=False)
     if rec_detect:
         return compos_rec, compos_nonrec
     else:
